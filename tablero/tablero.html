@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiperingenieria Digital · Tablero de Ventas 2025-2026</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{--navy:#1E2A4A;--blue:#3B5BDB;--blue2:#91A7FF;--amber:#F59F00;--bg:#F3F5FA;--card:#FFFFFF;--line:#E5E7EB;--txt:#1F2937;--muted:#6B7280;--soft:#9CA3AF}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:"Segoe UI",Calibri,Arial,sans-serif;color:var(--txt)}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+  header.card{display:flex;align-items:center;gap:22px;padding:14px 22px;border-bottom:5px solid var(--navy)}
+  header img{height:70px}
+  .sep{width:1px;height:64px;background:#D1D5DB}
+  .ttl h1{margin:0;font-size:26px;color:var(--navy);letter-spacing:.5px}
+  .ttl h2{margin:2px 0;font-size:15px;color:var(--blue)}
+  .ttl p{margin:0;font-size:12px;color:var(--muted)}
+  .cut{margin-left:auto;text-align:right}
+  .cut small{display:block;font-size:10px;font-weight:700;color:var(--muted)}
+  .cut b{font-size:17px;color:var(--navy)}
+  .cut span{display:block;font-size:10px;color:var(--soft)}
+  .bar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:16px 0;padding:14px 18px}
+  .f label{display:block;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin-bottom:4px}
+  .f select{min-width:170px;padding:8px 10px;border:1px solid #D1D5DB;border-radius:9px;font-size:13px;background:#fff}
+  .btn{padding:9px 14px;border:none;border-radius:9px;background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+  .btn.ghost{background:#EEF2FF;color:var(--blue)}
+  .status{font-size:11px;color:var(--muted);margin-left:auto}
+  .sec{font-size:12px;font-weight:700;color:var(--navy);letter-spacing:.8px;border-bottom:2px solid var(--blue);padding-bottom:4px;margin:22px 0 12px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  .kpi{padding:14px 16px;border-top:4px solid var(--blue)}
+  .kpi.warn{border-top-color:var(--amber)}
+  .kpi small{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px}
+  .kpi div{font-size:26px;font-weight:800;color:var(--navy);margin:6px 0 2px}
+  .kpi span{font-size:11px;color:var(--soft)}
+  .big{padding:18px 22px}
+  .big h3,.ch h3{margin:0 0 4px;font-size:17px}
+  .big p.d{margin:0 0 12px;font-size:12px;color:var(--muted)}
+  .mini{display:flex;gap:40px;margin-bottom:10px}
+  .mini small{font-size:11px;color:var(--muted)} .mini b{display:block;font-size:20px;color:var(--navy)} .mini span{font-size:11px;color:var(--soft)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .ch{padding:16px 18px}
+  .ch h3{font-size:14px;color:var(--txt);text-align:center}
+  canvas{width:100%!important}
+  footer{margin-top:18px;background:var(--navy);color:#fff;border-radius:10px;padding:10px 18px;display:flex;font-size:12px}
+  footer span{margin-left:auto;color:#C5CAE9;font-size:11px}
+  #overlay{position:fixed;inset:0;background:rgba(243,245,250,.92);display:flex;align-items:center;justify-content:center;z-index:9}
+  #overlay .card{padding:28px;max-width:460px;text-align:center}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- =================== CONFIGURACIÓN =================== -->
+<script>
+const CONFIG = {
+  CLIENT_ID: "PEGA-AQUI-EL-ID-DE-APLICACION",          // Azure / Entra ID > Registro de aplicaciones
+  AUTHORITY: "https://login.microsoftonline.com/common",
+  SHARE_URL: "PEGA-AQUI-EL-ENLACE-COMPARTIDO-DEL-EXCEL", // Enlace de OneDrive / SharePoint al .xlsx
+  SHEET_NAME: "2025-2026",                              // Hoja con la tabla Ventas2025_2026
+  AUTO_REFRESH_MIN: 5                                   // Recarga automática (minutos). 0 = desactivado
+};
+</script>
+<!-- ===================================================== -->
+
+<div id="overlay"><div class="card">
+  <h3 style="color:#1E2A4A;margin-top:0">Conectar con Excel</h3>
+  <p style="font-size:13px;color:#6B7280">Inicia sesión con tu cuenta Microsoft para leer el archivo desde OneDrive/SharePoint.</p>
+  <button class="btn" onclick="conectar()">Iniciar sesión y cargar datos</button>
+  <p style="font-size:12px;color:#9CA3AF;margin:14px 0 6px">o carga una copia local:</p>
+  <input type="file" accept=".xlsx,.xlsm" onchange="cargarLocal(this.files[0])">
+  <p id="msg" style="font-size:12px;color:#B45309"></p>
+</div></div>
+
+<div class="wrap">
+  <header class="card">
+    <img src="logo.jpg" alt="Hiperingenieria Digital">
+    <div class="sep"></div>
+    <div class="ttl">
+      <h1>HIPERINGENIERIA DIGITAL</h1>
+      <h2>Tablero de Analítica de Ventas 2025 – 2026</h2>
+      <p id="sub">Cargando…</p>
+    </div>
+    <div class="cut"><small>FECHA DE CORTE</small><b id="corte">—</b><span>Cifras en pesos (MXN)</span></div>
+  </header>
+
+  <div class="card bar">
+    <div class="f"><label>AÑO</label><select id="fAnio"></select></div>
+    <div class="f"><label>MES</label><select id="fMes"></select></div>
+    <div class="f"><label>PRODUCTO</label><select id="fProd"></select></div>
+    <div class="f"><label>TIPO CLIENTE</label><select id="fTipo"></select></div>
+    <button class="btn ghost" onclick="limpiar()">Limpiar filtros</button>
+    <button class="btn" onclick="recargar()">⟳ Actualizar desde Excel</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="sec">INDICADORES CLAVE</div>
+  <div class="kpis">
+    <div class="card kpi"><small>INGRESO BRUTO</small><div id="kIng">—</div><span>Total facturado</span></div>
+    <div class="card kpi"><small>ÓRDENES</small><div id="kOrd">—</div><span>facturas emitidas</span></div>
+    <div class="card kpi"><small>CLIENTES NUEVOS</small><div id="kNue">—</div><span>primera compra en el periodo</span></div>
+    <div class="card kpi"><small>TICKET PROMEDIO</small><div id="kTic">—</div><span>por factura</span></div>
+    <div class="card kpi"><small>CLIENTES RECURRENTES</small><div id="kRec">—</div><span id="kRecS">—</span></div>
+    <div class="card kpi warn"><small>SALDO PENDIENTE</small><div id="kSal">—</div><span id="kSalS">—</span></div>
+  </div>
+
+  <div class="sec">VENTAS</div>
+  <div class="card big">
+    <h3>Ventas totales por mes</h3>
+    <p class="d">Barras: ingreso del mes. Línea: acumulado del periodo seleccionado. Pasa el cursor por cada mes para ver el detalle.</p>
+    <div class="mini">
+      <div><small>Total del periodo</small><b id="mTot">—</b><span id="mMeses"></span></div>
+      <div><small>Promedio mensual</small><b id="mProm">—</b></div>
+      <div><small>Mejor mes</small><b id="mMej">—</b><span id="mMejN"></span></div>
+    </div>
+    <canvas id="cMes" height="110"></canvas>
+  </div>
+
+  <div class="sec">CLIENTES Y PRODUCTOS</div>
+  <div class="grid2">
+    <div class="card ch"><h3>Órdenes y clientes nuevos por mes</h3><canvas id="cOrd" height="190"></canvas></div>
+    <div class="card ch"><h3>Top 10 clientes por ingreso</h3><canvas id="cCli" height="190"></canvas></div>
+    <div class="card ch"><h3>Top 10 productos por ingreso (con producto identificado)</h3><canvas id="cPro" height="190"></canvas></div>
+    <div class="card ch"><h3>Ingreso: clientes nuevos vs recurrentes</h3><canvas id="cTip" height="190"></canvas></div>
+  </div>
+
+  <footer>Hiperingenieria Digital · Tablero de Analítica de Ventas<span>Fuente: Excel, hoja 2025-2026 (tabla Ventas2025_2026)</span></footer>
+</div>
+
+<script>
+const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MCORTO=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const fmt$=v=>"$"+Math.round(v).toLocaleString("es-MX");
+const fmtN=v=>Math.round(v).toLocaleString("es-MX");
+const fDate=d=>d.getUTCDate()+" "+MCORTO[d.getUTCMonth()]+" "+d.getUTCFullYear();
+let DATA=[], charts={}, msalApp=null, origen=null;
+
+/* ---------- Conexión a OneDrive / SharePoint (Microsoft Graph) ---------- */
+function shareId(url){const b=btoa(unescape(encodeURIComponent(url)));return "u!"+b.replace(/=+$/,"").replace(/\//g,"_").replace(/\+/g,"-");}
+async function token(){
+  if(!msalApp){msalApp=new msal.PublicClientApplication({auth:{clientId:CONFIG.CLIENT_ID,authority:CONFIG.AUTHORITY,redirectUri:location.href.split("#")[0].split("?")[0]},cache:{cacheLocation:"localStorage"}});}
+  const req={scopes:["Files.Read.All"]};
+  let acc=msalApp.getAllAccounts()[0];
+  if(!acc){const r=await msalApp.loginPopup(req);acc=r.account;}
+  try{return (await msalApp.acquireTokenSilent({...req,account:acc})).accessToken;}
+  catch(e){return (await msalApp.acquireTokenPopup(req)).accessToken;}
+}
+async function conectar(){
+  try{
+    msg("Conectando…");
+    if(CONFIG.CLIENT_ID.startsWith("PEGA")||CONFIG.SHARE_URL.startsWith("PEGA"))throw new Error("Falta configurar CLIENT_ID y SHARE_URL al inicio del archivo.");
+    const t=await token();
+    const r=await fetch("https://graph.microsoft.com/v1.0/shares/"+shareId(CONFIG.SHARE_URL)+"/driveItem/content",{headers:{Authorization:"Bearer "+t}});
+    if(!r.ok)throw new Error("No se pudo leer el archivo ("+r.status+"). Revisa el enlace y los permisos.");
+    origen="nube"; procesar(await r.arrayBuffer());
+  }catch(e){msg(e.message);console.error(e);}
+}
+function cargarLocal(file){if(!file)return;origen="local";const fr=new FileReader();fr.onload=e=>procesar(e.target.result);fr.readAsArrayBuffer(file);}
+function recargar(){if(origen==="nube")conectar();else document.getElementById("overlay").style.display="flex";}
+function msg(t){document.getElementById("msg").textContent=t;}
+
+/* ---------- Lectura y preparación de datos ---------- */
+function aFecha(v){
+  if(v instanceof Date)return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()));
+  if(typeof v==="number")return new Date(Math.round((v-25569)*864e5));
+  const d=new Date(v);return isNaN(d)?null:new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+}
+function procesar(buf){
+  const wb=XLSX.read(buf,{type:"array"});
+  const ws=wb.Sheets[CONFIG.SHEET_NAME]||wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{raw:true,defval:""});
+  DATA=rows.map(r=>{const f=aFecha(r["Fecha"]);if(!f)return null;const t=String(r["Título"]||"").trim();
+    return {id:Number(r["ID Documento"])||0,cliente:String(r["Cliente"]).trim(),fecha:f,anio:f.getUTCFullYear(),mes:f.getUTCMonth(),
+      clave:f.getUTCFullYear()+"-"+String(f.getUTCMonth()+1).padStart(2,"0"),producto:t||"Sin producto",
+      total:Number(r["Total"])||0,saldo:Number(r["Saldo"])||0};}).filter(Boolean);
+  // Cliente nuevo = primera compra del cliente (por fecha y luego ID)
+  DATA.sort((a,b)=>a.fecha-b.fecha||a.id-b.id);
+  const visto=new Set();DATA.forEach(r=>{r.nuevo=!visto.has(r.cliente);visto.add(r.cliente);r.tipo=r.nuevo?"Nuevo":"Recurrente";});
+  const min=DATA[0].fecha,max=DATA[DATA.length-1].fecha;
+  document.getElementById("sub").textContent="Periodo: "+fDate(min)+" — "+fDate(max)+"   ·   "+fmtN(DATA.length)+" facturas   ·   "+fmtN(visto.size)+" clientes";
+  document.getElementById("corte").textContent=fDate(max);
+  document.getElementById("status").textContent="Datos "+(origen==="nube"?"de OneDrive/SharePoint":"de archivo local")+" · actualizado "+new Date().toLocaleTimeString("es-MX");
+  llenarFiltros();document.getElementById("overlay").style.display="none";render();
+}
+
+/* ---------- Filtros ---------- */
+const $=id=>document.getElementById(id);
+function opciones(sel,vals,keep){const prev=sel.value;sel.innerHTML='<option value="">Todos</option>'+vals.map(v=>`<option value="${v.v}" ${v.dis?"disabled":""}>${v.t}</option>`).join("");if(keep&&[...sel.options].some(o=>o.value===prev&&!o.disabled))sel.value=prev;}
+function llenarFiltros(){
+  opciones($("fAnio"),[...new Set(DATA.map(r=>r.anio))].sort().map(a=>({v:a,t:a})),true);
+  opciones($("fProd"),[...new Set(DATA.map(r=>r.producto))].sort().map(p=>({v:p,t:p})),true);
+  opciones($("fTipo"),[{v:"Nuevo",t:"Nuevo"},{v:"Recurrente",t:"Recurrente"}],true);
+  llenarMeses();
+}
+function llenarMeses(){ // el mes depende del año seleccionado
+  const a=$("fAnio").value;const con=new Set(DATA.filter(r=>!a||r.anio==a).map(r=>r.mes));
+  opciones($("fMes"),MESES.map((m,i)=>({v:i,t:m+(con.has(i)?"":" (sin datos)"),dis:!con.has(i)})),true);
+}
+$("fAnio").onchange=()=>{llenarMeses();render();};
+["fMes","fProd","fTipo"].forEach(id=>$(id).onchange=render);
+function limpiar(){["fAnio","fMes","fProd","fTipo"].forEach(id=>$(id).value="");llenarMeses();render();}
+function filtrados(){const a=$("fAnio").value,m=$("fMes").value,p=$("fProd").value,t=$("fTipo").value;
+  return DATA.filter(r=>(!a||r.anio==a)&&(m===""||r.mes==m)&&(!p||r.producto===p)&&(!t||r.tipo===t));}
+
+/* ---------- Render ---------- */
+const sum=(arr,f)=>arr.reduce((s,r)=>s+f(r),0);
+function agrupar(arr,key,val){const m=new Map();arr.forEach(r=>m.set(key(r),(m.get(key(r))||0)+val(r)));return m;}
+function grafica(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+const ejeK={ticks:{callback:v=>"$"+(v/1000).toLocaleString("es-MX")+"K"},grid:{color:"#EEF0F4"}};
+function render(){
+  const D=filtrados();
+  const ing=sum(D,r=>r.total),ord=D.length,nue=D.filter(r=>r.nuevo).length,sal=sum(D,r=>r.saldo);
+  const compras=agrupar(D,r=>r.cliente,()=>1);const rec=[...compras.values()].filter(v=>v>1).length;
+  $("kIng").textContent=fmt$(ing);$("kOrd").textContent=fmtN(ord);$("kNue").textContent=fmtN(nue);
+  $("kTic").textContent=fmt$(ord?ing/ord:0);
+  $("kRec").textContent=(compras.size?rec/compras.size*100:0).toFixed(1)+"%";$("kRecS").textContent=fmtN(rec)+" de "+fmtN(compras.size)+" con 2ª compra";
+  $("kSal").textContent=fmt$(sal);$("kSalS").textContent=(ing?Math.round(sal/ing*100):0)+"% del ingreso";
+
+  // Mensual
+  const claves=[...new Set(D.map(r=>r.clave))].sort();
+  const etiqueta=k=>MCORTO[Number(k.slice(5))-1]+" "+k.slice(2,4);
+  const im=agrupar(D,r=>r.clave,r=>r.total),om=agrupar(D,r=>r.clave,()=>1),nm=agrupar(D,r=>r.clave,r=>r.nuevo?1:0);
+  const vals=claves.map(k=>im.get(k)||0);let acc=0;const acum=vals.map(v=>acc+=v);
+  const mx=Math.max(0,...vals),iMx=vals.indexOf(mx);
+  $("mTot").textContent=fmt$(ing);$("mMeses").textContent=claves.length+" meses";
+  $("mProm").textContent=fmt$(claves.length?ing/claves.length:0);
+  $("mMej").textContent=fmt$(mx);$("mMejN").textContent=iMx>=0?etiqueta(claves[iMx]):"";
+  grafica("cMes",{data:{labels:claves.map(etiqueta),datasets:[
+    {type:"bar",label:"Ingreso",data:vals,backgroundColor:"#3B5BDB",borderRadius:4,yAxisID:"y"},
+    {type:"line",label:"Acumulado",data:acum,borderColor:"#748FFC",borderDash:[6,4],pointRadius:0,tension:.25,yAxisID:"y2"}]},
+    options:{interaction:{mode:"index",intersect:false},plugins:{tooltip:{callbacks:{
+      label:c=>c.dataset.label+": "+fmt$(c.raw),
+      afterBody:it=>{const i=it[0].dataIndex;if(i===0)return "";const p=vals[i-1];return p?"Vs mes anterior: "+((vals[i]/p-1)*100).toFixed(1)+"%":"";}}}},
+      scales:{y:ejeK,y2:{position:"right",grid:{display:false},ticks:{callback:v=>"$"+(v/1e6).toFixed(1)+"M"}}}}});
+  grafica("cOrd",{data:{labels:claves.map(etiqueta),datasets:[
+    {type:"bar",label:"Órdenes",data:claves.map(k=>om.get(k)||0),backgroundColor:"#3B5BDB",borderRadius:3},
+    {type:"line",label:"Clientes nuevos",data:claves.map(k=>nm.get(k)||0),borderColor:"#F59F00",backgroundColor:"#F59F00",pointRadius:3}]},
+    options:{interaction:{mode:"index",intersect:false},scales:{y:{grid:{color:"#EEF0F4"}}}}});
+  const top=(m,n)=>[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n);
+  const tc=top(agrupar(D,r=>r.cliente,r=>r.total),10);
+  const barH=(id,t,color)=>grafica(id,{type:"bar",data:{labels:t.map(x=>x[0].length>34?x[0].slice(0,33)+"…":x[0]),datasets:[{data:t.map(x=>x[1]),backgroundColor:color,borderRadius:3}]},
+    options:{indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt$(c.raw)}}},scales:{x:ejeK,y:{grid:{display:false}}}}});
+  barH("cCli",tc,"#3B5BDB");
+  barH("cPro",top(agrupar(D.filter(r=>r.producto!=="Sin producto"),r=>r.producto,r=>r.total),10),"#91A7FF");
+  const tn=sum(D.filter(r=>r.nuevo),r=>r.total),tr=ing-tn;
+  grafica("cTip",{type:"doughnut",data:{labels:["Nuevo","Recurrente"],datasets:[{data:[tn,tr],backgroundColor:["#F59F00","#3B5BDB"],borderWidth:2}]},
+    options:{cutout:"62%",plugins:{legend:{position:"bottom"},tooltip:{callbacks:{label:c=>c.label+": "+fmt$(c.raw)+" ("+(ing?(c.raw/ing*100).toFixed(1):0)+"%)"}}}}});
+}
+if(CONFIG.AUTO_REFRESH_MIN>0)setInterval(()=>{if(origen==="nube")conectar();},CONFIG.AUTO_REFRESH_MIN*60000);
+</script>
+</body>
+</html>
