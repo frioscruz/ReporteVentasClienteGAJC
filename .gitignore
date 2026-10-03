@@ -1,0 +1,5 @@
+# Los libros de Excel contienen datos de facturas de clientes.
+# Este repositorio es público, así que NO se suben a GitHub.
+*.xlsx
+*.xlsm
+~$*
