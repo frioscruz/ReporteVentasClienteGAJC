@@ -126,7 +126,7 @@ const CONFIG = {
     <div class="card ch"><h3>Ingreso: clientes nuevos vs recurrentes</h3><canvas id="cTip" height="190"></canvas></div>
   </div>
 
-  <footer>Hiperingenieria Digital · Tablero de Analítica de Ventas<span>Fuente: Excel, hoja 2025-2026 (tabla Ventas2025_2026)</span></footer>
+  <footer>Hiperingenieria Digital · Tablero de Analítica de Ventas<span>Fuente: Excel, hoja 2025-2026 (Ingreso = mayor entre Total e Impuestos)</span></footer>
 </div>
 
 <script>
@@ -174,7 +174,7 @@ function procesar(buf){
   DATA=rows.map(r=>{const f=aFecha(r["Fecha"]);if(!f)return null;const t=String(r["Título"]||"").trim();
     return {id:Number(r["ID Documento"])||0,cliente:String(r["Cliente"]).trim(),fecha:f,anio:f.getUTCFullYear(),mes:f.getUTCMonth(),
       clave:f.getUTCFullYear()+"-"+String(f.getUTCMonth()+1).padStart(2,"0"),producto:t||"Sin producto",
-      total:Number(r["Total"])||0,saldo:Number(r["Saldo"])||0};}).filter(Boolean);
+      total:Math.max(Number(r["Total"])||0,Number(r["Impuestos"])||0),saldo:Number(r["Saldo"])||0};}).filter(Boolean);
   // Cliente nuevo = primera compra del cliente (por fecha y luego ID)
   DATA.sort((a,b)=>a.fecha-b.fecha||a.id-b.id);
   const visto=new Set();DATA.forEach(r=>{r.nuevo=!visto.has(r.cliente);visto.add(r.cliente);r.tipo=r.nuevo?"Nuevo":"Recurrente";});
